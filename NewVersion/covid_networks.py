@@ -1,5 +1,5 @@
 import numpy
-import covid_farz as utils
+import GroupCBUCOVID.NewVersion.covid_farz as utils
 import snap
 import scipy.sparse
 import networkx
