@@ -366,8 +366,7 @@ def generate_demographic_contact_network(N, demographic_data, layer_generator='F
     # Create a networkx Graph object from the adjacency matrix:
     G_baseline = networkx.from_scipy_sparse_matrix(A_baseline)
     graphs['baseline'] = G_baseline
-
-
+    graphs['full_isolation'] = networkx.classes.function.create_empty_copy(G_baseline)
     #########################################
     # Generate social distancing modifications to the baseline *public* contact network:
     #########################################
@@ -395,27 +394,6 @@ def generate_demographic_contact_network(N, demographic_data, layer_generator='F
             pyplot.ylabel('num nodes')
             pyplot.legend(loc='upper right')
             pyplot.show()
-
-
-    #########################################
-    # Generate modifications to the contact network representing isolation of individuals in specified groups:
-    #########################################
-    if(len(isolation_groups) > 0):
-
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        # Assemble an adjacency matrix mask (from layer generation step) that will zero out
-        # all public contact edges for the isolation groups but allow all public edges for other groups.
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        A_isolation_mask    = scipy.sparse.lil_matrix(scipy.sparse.block_diag(adjMatrices_isolation_mask))
-
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        # Then multiply each distancing graph by this mask to generate the corresponding
-        # distancing adjacency matrices where the isolation groups are isolated (no public edges),
-        # and create graphs corresponding to the isolation intervention for each distancing level:
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        for graphName, graph in graphs.items():
-            A_withIsolation = scipy.sparse.csr_matrix.multiply( networkx.adj_matrix(graph), A_isolation_mask )
-            graphs[graphName+'_isolation'] = networkx.from_scipy_sparse_matrix(A_withIsolation)
 
 
 
@@ -500,6 +478,7 @@ def custom_exponential_graph(base_graph=None, scale=100, min_num_edges=0, m=9, n
                 for neighbor in neighbors:
                     if(neighbor not in quarantineKeepNeighbors):
                         graph.remove_edge(node, neighbor)
+        return graph
 
     elif type(base_graph) == snap.PUNGraph:
         for NI in base_graph.Nodes():
@@ -518,6 +497,7 @@ def custom_exponential_graph(base_graph=None, scale=100, min_num_edges=0, m=9, n
                 for i in range(len(temp)-1):
                     if(DstNId_temp[i] not in quarantineKeepNeighbors):
                         base_graph.DelEdge(DstNId_temp[i], temp[i])
+        return base_graph
     else:
         print("wrong input")
 
