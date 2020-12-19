@@ -26,7 +26,7 @@ def generate_workplace_contact_network(num_cohorts=1, num_nodes_per_cohort=100, 
 
         farz_params.update({'n':numNodes, 'k':numTeams, 'm':cohortMeanDegree})
 
-        cohortNetwork, cohortTeamLabels = FARZ.generate(farz_params=farz_params)
+        cohortNetwork, cohortTeamLabels = utils.generate_farz(farz_params=farz_params)
 
         cohortNetworks.append(cohortNetwork)
 
