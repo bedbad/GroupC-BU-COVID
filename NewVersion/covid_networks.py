@@ -4,6 +4,74 @@ import snap
 import scipy.sparse
 import networkx
 
+def generate_workplace_contact_network(num_cohorts=1, num_nodes_per_cohort=100, num_teams_per_cohort=10,
+                                        mean_intracohort_degree=6, pct_contacts_intercohort=0.2,
+                                        farz_params={'alpha':5.0, 'gamma':5.0, 'beta':0.5, 'r':1, 'q':0.0, 'phi':10,
+                                                     'b':0, 'epsilon':1e-6, 'directed': False, 'weighted': False},
+                                        distancing_scales=[]):
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Generate FARZ networks of intra-cohort contacts:
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    cohortNetworks = []
+
+    teams_indices = {}
+
+    for i in range(num_cohorts):
+
+        numNodes            = num_nodes_per_cohort[i] if isinstance(num_nodes_per_cohort, list) else num_nodes_per_cohort
+        numTeams            = num_teams_per_cohort[i] if isinstance(num_teams_per_cohort, list) else num_teams_per_cohort
+        cohortMeanDegree    = mean_intracohort_degree[i] if isinstance(mean_intracohort_degree, list) else mean_intracohort_degree
+
+        farz_params.update({'n':numNodes, 'k':numTeams, 'm':cohortMeanDegree})
+
+        cohortNetwork, cohortTeamLabels = FARZ.generate(farz_params=farz_params)
+
+        cohortNetworks.append(cohortNetwork)
+
+        for node, teams in cohortTeamLabels.items():
+            for team in teams:
+                try:
+                    teams_indices['c'+str(i)+'-t'+str(team)].append(node)
+                except KeyError:
+                    teams_indices['c'+str(i)+'-t'+str(team)] = [node]
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Establish inter-cohort contacts:
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    cohortsAdjMatrices = [networkx.adj_matrix(cohortNetwork) for cohortNetwork in cohortNetworks]
+
+    workplaceAdjMatrix = scipy.sparse.block_diag(cohortsAdjMatrices)
+    workplaceNetwork   = networkx.from_scipy_sparse_matrix(workplaceAdjMatrix)
+
+    N = workplaceNetwork.number_of_nodes()
+
+    cohorts_indices = {}
+    cohortStartIdx  = -1
+    cohortFinalIdx  = -1
+    for c, cohortNetwork in enumerate(cohortNetworks):
+
+        cohortStartIdx = cohortFinalIdx + 1
+        cohortFinalIdx = cohortStartIdx + cohortNetwork.number_of_nodes() - 1
+        cohorts_indices['c'+str(c)] = list(range(cohortStartIdx, cohortFinalIdx))
+
+        for team, indices in teams_indices.items():
+            if('c'+str(c) in team):
+                teams_indices[team] = [idx+cohortStartIdx for idx in indices]
+
+        for i in list(range(cohortNetwork.number_of_nodes())):
+            i_intraCohortDegree = cohortNetwork.degree[i]
+            i_interCohortDegree = int( ((1/(1-pct_contacts_intercohort))*i_intraCohortDegree)-i_intraCohortDegree )
+            # Add intercohort edges:
+            if(len(cohortNetworks) > 1):
+                for d in list(range(i_interCohortDegree)):
+                    j = numpy.random.choice(list(range(0, cohortStartIdx))+list(range(cohortFinalIdx+1, N)))
+                    workplaceNetwork.add_edge(i, j)
+
+    return workplaceNetwork, cohorts_indices, teams_indices
+
 
 
 def generate_demographic_contact_network(N, demographic_data, layer_generator='FARZ', layer_info=None, distancing_scales=[], isolation_groups=[], verbose=False):
@@ -421,8 +489,8 @@ def custom_exponential_graph(base_graph=None, scale=100, min_num_edges=0, m=9, n
         @param base_graph: a SNAP/NetworkX type random graph
         @param scale: number of nodes in the graph
         @min_num_edges: minimum number of edges for each node
-    """ 
-    if type(base_graph) == networkx.classes.graph.Graph: 
+    """
+    if type(base_graph) == networkx.classes.graph.Graph:
         graph = base_graph.copy()
         for node in graph:
             neighbors = list(graph[node].keys())
@@ -446,7 +514,7 @@ def custom_exponential_graph(base_graph=None, scale=100, min_num_edges=0, m=9, n
                 for Id in NI.GetOutEdges():
                     DstNId_temp.append(Id)
                     temp.append(NI.GetId())
-                # get around RuntimeError: Execution stopped: (0<=ValN)&&(ValN<Vals) 
+                # get around RuntimeError: Execution stopped: (0<=ValN)&&(ValN<Vals)
                 for i in range(len(temp)-1):
                     if(DstNId_temp[i] not in quarantineKeepNeighbors):
                         base_graph.DelEdge(DstNId_temp[i], temp[i])
@@ -481,4 +549,3 @@ def plot_degree_distn(graph, max_degree=None, show=True, use_seaborn=True):
     pyplot.legend(loc='upper right')
     if(show):
         pyplot.show()
-
