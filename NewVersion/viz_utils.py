@@ -1,3 +1,7 @@
+import networkx as nx
+import plotly.graph_objects as go
+import pandas as pd
+
 def visualize_contact_network(G, numNodes):
   spring_3D = nx.spring_layout(G, dim=3, seed=18)
   x_nodes = [spring_3D[i][0] for i in range(numNodes)]# x-coordinates of nodes
