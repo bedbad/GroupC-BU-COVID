@@ -159,8 +159,8 @@ def generate_demographic_contact_network(N, demographic_data, distancing_scales=
     # Strongly connect the nodes selected for each household by adding edges to the adjacency matrix.
     for household in households:
         household['indices'] = []
-        for ageBracket in household['ageBrackets']:
-            ageGroupIndices = next(layer_info[item]['selection_indices'] for item in layer_info if ageBracket in layer_info[item]["ageBrackets"])
+        for studentType in household['studentTypes']:
+            ageGroupIndices = next(layer_info[item]['selection_indices'] for item in layer_info if studentType in layer_info[item]["studentTypes"])
             memberIndex     = ageGroupIndices.pop()
             household['indices'].append(memberIndex)
             individualAgeBracketLabels[memberIndex] = ageBracket
@@ -172,7 +172,7 @@ def generate_demographic_contact_network(N, demographic_data, distancing_scales=
                 for graphName, graph in graphs.items():
                     graph.add_edge(memberIdx, housemateIdx)
 
-    return graphs, individualAgeBracketLabels, households
+    return graphs, individualStudentTypeLabels, households
 
 def custom_exponential_graph(base_graph=None, scale=100, min_num_edges=0, m=9, n=None):
     """
