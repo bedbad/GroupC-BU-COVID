@@ -13,7 +13,6 @@ def generate_demographic_contact_network(N, demographic_data, distancing_scales=
         @param N: number of individuals
         @param demographic_data: dictionary containing the household size distribution and other data
         @param distancing_scales: a list of floats corresponding to desired distancing scales
-        @min_num_edges: minimum number of edges for each node
     """
     # Dictionary to store the various generated graphs
     graphs = {}
@@ -52,14 +51,14 @@ def generate_demographic_contact_network(N, demographic_data, distancing_scales=
             # Single occupant
             household['size'] = 1
             # Add one member to the household
-            household['studentTypes'].append( numpy.random.choice(list(student_probs_single_occupancy.keys()), p=list(student_probs_single_occupancy.values())) )
+            household['studentTypes'].append(numpy.random.choice(list(student_probs_single_occupancy.keys()), p=list(student_probs_single_occupancy.values())))
 
         elif(household['situation'] == 'MultiOccupancy'):
             # There's at least two members, select a household size according to the predefined distribution
-            household['size'] = min(homelessNodes, max(2, numpy.random.choice(list(household_size_distn_givenGT1), p=list(household_size_distn_givenGT1.values()))) )
+            household['size'] = min(homelessNodes, max(2, numpy.random.choice(list(household_size_distn_givenGT1), p=list(household_size_distn_givenGT1.values()))))
             # Add members to the household
             for m in range(household['size'] - len(household['studentTypes'])):
-                household['studentTypes'].append( numpy.random.choice(list(student_probs_multi_occupancy.keys()), p=list(student_probs_multi_occupancy.values())) )
+                household['studentTypes'].append(numpy.random.choice(list(student_probs_multi_occupancy.keys()), p=list(student_probs_multi_occupancy.values())))
 
         if(len(household['studentTypes']) == household['size']):
             homelessNodes -= household['size']
@@ -117,14 +116,15 @@ def generate_demographic_contact_network(N, demographic_data, distancing_scales=
         print("Max Degree: " + str(maxDegree))
 
         def adj_list_from_snapgraph(snapGraph):
-          N = snapGraph.GetNodes()
-          adj_matrix = numpy.zeros((N, N))
-          for e in snapGraph.Edges():
-            src = e.GetSrcNId()
-            dest = e.GetDstNId()
-            adj_matrix[src][dest] = 1
-          #print(adj_matrix)
-          return adj_matrix
+            # Create an adjacecy matrix for the input graph
+            N = snapGraph.GetNodes()
+            adj_matrix = numpy.zeros((N, N))
+            for e in snapGraph.Edges():
+                src = e.GetSrcNId()
+                dest = e.GetDstNId()
+                adj_matrix[src][dest] = 1
+            #print(adj_matrix)
+            return adj_matrix
 
         adj_list = adj_list_from_snapgraph(layerInfo['graph'])
 
@@ -143,9 +143,6 @@ def generate_demographic_contact_network(N, demographic_data, distancing_scales=
     # Randomly remove a number of edges drawn from an exponential distribution
     for dist_scale in distancing_scales:
         graphs['distancingScale'+str(dist_scale)] = custom_exponential_graph(G_baseline_NODIST, scale=dist_scale)
-
-
-
 
     # Add edges between housemates to strongly connect households
     for layerGroup, layerInfo in layer_info.items():
@@ -170,6 +167,7 @@ def generate_demographic_contact_network(N, demographic_data, distancing_scales=
                     graph.add_edge(memberIdx, housemateIdx)
 
     return graphs, individualStudentTypeLabels, households
+
 
 def custom_exponential_graph(base_graph=None, scale=100, min_num_edges=0, m=9, n=None):
     """

@@ -27,6 +27,7 @@ def random_choice(values, weights=None , size = 1, replace = True):
         tmp.append(values[i])
         return tmp
 
+
 class Comms:
      def __init__(self, k):
          self.k = k
@@ -46,7 +47,6 @@ class Comms:
                  for i,s in g:
                     f.write(str(i) + ' ')
                  f.write('\n')
-
 
 
 class Graph:
@@ -85,22 +85,18 @@ class Graph:
         self.counter +=1
         self.neigh[u].append((v,w))
         self.deg[v]+=w
-        if  self.deg[v]>self.max_degree: self.max_degree = self.deg[v]
-
-        if not self.directed: #if directed deg is indegree, outdegree = len(negh)
+        if self.deg[v]>self.max_degree: self.max_degree = self.deg[v]
+        if not self.directed: 
             self.neigh[v].append((u,w))
             self.deg[u]+=w
             if  self.deg[u]>self.max_degree: self.max_degree = self.deg[u]
-
         return
-
 
     def to_nx(self):
         import networkx as nx
         G=nx.Graph()
         for u,v, w in self.edge_list:
             G.add_edge(u, v)
-            # G.add_edges_from(self.edge_list)
         return G
 
     def to_nx(self, C):
@@ -151,6 +147,7 @@ def Q(G, C):
     q /= 2*m
     return q
 
+
 def common_neighbour(i, G, normalize=True):
     p = {}
     for k,wik in G.neigh[i]:
@@ -162,6 +159,7 @@ def common_neighbour(i, G, normalize=True):
     for j in p:  p[j] = p[j]*1.0 / maxp
     return p
 
+
 def choose_community(i, G, C, alpha, beta, gamma, epsilon):
     mids =[k for  k,uik in C.memberships[i]]
     if random.random()< beta: #inside
@@ -170,6 +168,7 @@ def choose_community(i, G, C, alpha, beta, gamma, epsilon):
         cids = [j for j in range(len(C.groups)) if j not in mids] #:  cids.append(j)
 
     return cids[ int(random.random()*len(cids))] if len(cids)>0 else None
+
 
 def degree_similarity(i, ids, G, gamma, normalize = True):
     p = [0]*len(ids)
@@ -181,8 +180,10 @@ def degree_similarity(i, ids, G, gamma, normalize = True):
     p = [pi*1.0/maxp if gamma<0 else 1-pi*1.0/maxp for pi in p]
     return p
 
+
 def combine (a,b,alpha,gamma):
     return (a**alpha) / ((b+1)**gamma)
+
 
 def choose_node(i,c, G, C, alpha, beta, gamma, epsilon):
     ids = [j for j,_ in C.groups[c] if j !=i ]
@@ -219,6 +220,7 @@ def connect_neighbor(i, j, pj, c, b,  G, C, beta):
         if (random.random() <b and k!=i and (k in ids or random.random()>beta)):
             G.add_edge(i,k,wjk*pj)
 
+
 def connect(i, b,  G, C, alpha, beta, gamma, epsilon):
     #Choose community
     c = choose_community(i, G, C, alpha, beta, gamma, epsilon)
@@ -230,6 +232,7 @@ def connect(i, b,  G, C, alpha, beta, gamma, epsilon):
     G.add_edge(i,j,pj)
     connect_neighbor(i, j, pj , c, b,  G, C, beta)
 
+
 def select_node(G, method = 'uniform'):
     if method=='uniform':
         return int(random.random() * G.n) # uniform
@@ -238,6 +241,7 @@ def select_node(G, method = 'uniform'):
         elif method == 'younger_less_active' :  p = [G.n-i for i in range(G.n)] # younger less active
         else:  p = [1 for i in range(G.n)] # uniform
         return  random_choice(range(len(p)), p ) #, size=1, replace = False)[0]
+
 
 def assign(i, C, e=1, r=1, q = 0.5):
     p = [e +len(c) for c in C.groups]
@@ -248,6 +252,7 @@ def assign(i, C, e=1, r=1, q = 0.5):
               id = random_choice(range(C.k),p )
               C.add(id, i)
     return
+
 
 def print_setting(n,m,k,alpha,beta,gamma, phi,r,q,epsilon,weighted,directed):
     print('n:',n,'m:', m ,'k:', k,'alpha:', alpha,'beta:', beta,'gamma:', gamma,)
@@ -315,10 +320,12 @@ default_ranges = {'beta':(0.5,1,0.05), 'k':(2,50,5), 'm':(2,11,1) , 'phi':(1,100
 default_FARZ_setting = {"n":1000, "k":4, "m":5, "alpha":0.5,"gamma":0.5, "beta":.8, "phi":1, "o":1, 'q':0.5,  "b":0.0, "epsilon":0.0000001, 'directed':False, 'weighted':False}
 default_batch_setting= {'vari':None, 'arange':None, 'repeat':1, 'path':'.', 'net_name':'network', 'format':'gml', 'farz_params':None}
 supported_formats = ['gml','list']
+
 def generate_farz( vari =None, arange =None, repeat = 1, path ='.', net_name = 'network',format ='gml', farz_params= default_FARZ_setting.copy()):
+    
     def get_range(s,e,i):
         res =[]
-        while s<=e +1e-6:
+        while s<=e + 1e-6:
             res.append(s)
             s +=i
         return res
@@ -326,28 +333,14 @@ def generate_farz( vari =None, arange =None, repeat = 1, path ='.', net_name = '
     if vari is None:
         for r in range(repeat):
             G, C =realize(**farz_params)
-
             import snap as snap
-            #G = G.to_nx(C)
             G = G.to_snap(C)
-            #if not farz_params['directed']: G = G.to_undirected()
-
-
-            name = net_name+( str(r+1) if repeat>1 else '')
-            # G = write_to_file(G,C,path,name,format,farz_params)
-
-            # print(len([memtup[0][0] for memtup in C.memberships.values()]))
-            # import numpy
-            # (unique, counts) = numpy.unique( [memtup[0][0] for memtup in C.memberships.values()], return_counts=True )
-            # print(numpy.asarray((unique, counts)).T)
-            # exit()
-
-            #node_communities = {node: [c[0] for c in comm_tup] for node, comm_tup in C.memberships.items()}
-
-        return G #, node_communities
+            name = net_name+(str(r+1) if repeat>1 else '')
+        return G
 
     if arange ==None:
         arange = default_ranges[vari]
+
     for i,var in enumerate(get_range(arange[0],arange[1],arange[2])):
         for r in range(repeat):
             farz_params[vari] = var

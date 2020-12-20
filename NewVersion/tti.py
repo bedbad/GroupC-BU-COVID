@@ -4,7 +4,6 @@ import numpy
 import time
 
 
-
 def run_tti_sim(model, T, max_dt=None,
                 intervention_start_pct_infected=0, average_introductions_per_day=0,
                 testing_cadence='everyday', pct_tested_per_day=1.0, test_falseneg_rate='temporal',
@@ -118,12 +117,6 @@ def run_tti_sim(model, T, max_dt=None,
                     nodeTestedInCurrentStateStatuses = model.testedInCurrentState.flatten()
                     nodePositiveStatuses             = model.positive.flatten()
 
-                    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-                    # tracingPoolQueue[0] = tracingPoolQueue[0]Queue.pop(0)
-
-                    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
                     newIsolationGroup_symptomatic = []
                     newIsolationGroup_contact     = []
 
@@ -152,7 +145,6 @@ def run_tti_sim(model, T, max_dt=None,
                                                 numSelfIsolated_symptomaticGroupmate += 1
                                                 newIsolationGroup_symptomatic.append(isolationGroupmate)
 
-
                     #----------------------------------------
                     # Isolate the CONTACTS of detected POSITIVE cases without a test:
                     #----------------------------------------
@@ -176,16 +168,10 @@ def run_tti_sim(model, T, max_dt=None,
                                         newIsolationGroup_contact.append(isolationGroupmate)
                                         numSelfIsolated_positiveContactGroupmate += 1
 
-
                     #----------------------------------------
                     # Update the nodeStates list after self-isolation updates to model.X:
                     #----------------------------------------
                     nodeStates = model.X.flatten()
-
-
-                    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
                     #----------------------------------------
                     # Allow SYMPTOMATIC individuals to self-seek tests
                     # regardless of cadence testing days
@@ -258,10 +244,6 @@ def run_tti_sim(model, T, max_dt=None,
 
                             if(len(testingPool) > 0):
                                 randomSelection = testingPool[numpy.random.choice(len(testingPool), numRandomTests, p=testingPool_degreeWeights, replace=False)]
-
-
-                    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
                     #----------------------------------------
                     # Perform the tests on the selected individuals:
@@ -369,7 +351,6 @@ def run_tti_sim(model, T, max_dt=None,
 
                     # Add the nodes to be traced to the tracing queue:
                     tracingPoolQueue.append(newTracingPool)
-
 
                     print("\t"+str(numTested_symptomatic) +"\ttested due to symptoms  [+ "+str(numPositive_symptomatic)+" positive (%.2f %%) +]" % (numPositive_symptomatic/numTested_symptomatic*100 if numTested_symptomatic>0 else 0))
                     print("\t"+str(numTested_tracing)     +"\ttested as traces        [+ "+str(numPositive_tracing)+" positive (%.2f %%) +]" % (numPositive_tracing/numTested_tracing*100 if numTested_tracing>0 else 0))
