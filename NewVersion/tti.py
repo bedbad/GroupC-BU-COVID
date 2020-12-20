@@ -1,7 +1,6 @@
 from __future__ import division
 import pickle
 import numpy
-
 import time
 
 
@@ -29,11 +28,6 @@ def run_tti_sim(model, T, max_dt=None,
     if(cadence_testing_days is None):
         cadence_testing_days    = {
                                     'everyday':     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27],
-                                    'workday':      [0, 1, 2, 3, 4, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25],
-                                    'semiweekly':   [0, 3, 7, 10, 14, 17, 21, 24],
-                                    'weekly':       [0, 7, 14, 21],
-                                    'biweekly':     [0, 14],
-                                    'monthly':      [0],
                                     'cycle_start':  [0]
                                 }
 
@@ -77,7 +71,7 @@ def run_tti_sim(model, T, max_dt=None,
     running     = True
     while running:
 
-        running = model.run_iteration(max_dt=max_dt)
+        running = model.run_iteration(max_dt=None)
 
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Introduce exogenous exposures randomly:

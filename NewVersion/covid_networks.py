@@ -85,12 +85,9 @@ def generate_demographic_contact_network(N, demographic_data, distancing_scales=
 
         layerInfo['numIndividuals'] = N
 
-        print(layerInfo['numIndividuals'])
-
         layerInfo['indices'] = range(curidx, curidx+layerInfo['numIndividuals'])
 
         curidx += layerInfo['numIndividuals']
-        print(curidx)
 
         individualAgeGroupLabels[min(layerInfo['indices']):max(layerInfo['indices'])] = [layerGroup]*layerInfo['numIndividuals']
 
