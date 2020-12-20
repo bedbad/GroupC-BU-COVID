@@ -163,7 +163,7 @@ def generate_demographic_contact_network(N, demographic_data, distancing_scales=
             ageGroupIndices = next(layer_info[item]['selection_indices'] for item in layer_info if studentType in layer_info[item]["studentTypes"])
             memberIndex     = ageGroupIndices.pop()
             household['indices'].append(memberIndex)
-            individualAgeBracketLabels[memberIndex] = ageBracket
+            individualStudentTypeLabels[memberIndex] = studentType
 
         for memberIdx in household['indices']:
             nonselfIndices = [i for i in household['indices'] if memberIdx!=i]
