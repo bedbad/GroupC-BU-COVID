@@ -221,6 +221,62 @@ class SEIRSModel(object):
                 self.nodeGroupData[groupName]['N'][0]           = self.numNodes - self.numF[0]
 
 
+    #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    def set_isolation(self, node, isolate):
+        # Move this node in/out of the appropriate isolation state:
+        if(isolate == True):
+            if(self.X[node] == self.S):
+                self.X[node] = self.Q_S
+            elif(self.X[node] == self.E):
+                self.X[node] = self.Q_E
+            elif(self.X[node] == self.I_pre):
+                self.X[node] = self.Q_pre
+            elif(self.X[node] == self.I_sym):
+                self.X[node] = self.Q_sym
+            elif(self.X[node] == self.I_asym):
+                self.X[node] = self.Q_asym
+            elif(self.X[node] == self.R):
+                self.X[node] = self.Q_R
+        elif(isolate == False):
+            if(self.X[node] == self.Q_S):
+                self.X[node] = self.S
+            elif(self.X[node] == self.Q_E):
+                self.X[node] = self.E
+            elif(self.X[node] == self.Q_pre):
+                self.X[node] = self.I_pre
+            elif(self.X[node] == self.Q_sym):
+                self.X[node] = self.I_sym
+            elif(self.X[node] == self.Q_asym):
+                self.X[node] = self.I_asym
+            elif(self.X[node] == self.Q_R):
+                self.X[node] = self.R
+        # Reset the isolation timer:
+        self.timer_isolation[node] = 0
+
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    def set_tested(self, node, tested):
+        self.tested[node] = tested
+        self.testedInCurrentState[node] = tested
+
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    def set_positive(self, node, positive):
+        self.positive[node] = positive
+
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    def introduce_exposures(self, num_new_exposures):
+        exposedNodes = numpy.random.choice(range(self.numNodes), size=num_new_exposures, replace=False)
+        for exposedNode in exposedNodes:
+            if(self.X[exposedNode]==self.S):
+                self.X[exposedNode] = self.E
+            elif(self.X[exposedNode]==self.Q_S):
+                self.X[exposedNode] = self.Q_E
+
+
     def update_parameters(self):
 
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -725,6 +781,175 @@ class SEIRSModel(object):
                     print_reset = True
 
         return True
+
+    def run_iteration(self, max_dt=None):
+
+        max_dt = self.tmax if max_dt is None else max_dt
+
+        if(self.tidx >= len(self.tseries)-1):
+            # Room has run out in the timeseries storage arrays; double the size of these arrays:
+            self.increase_data_series_length()
+
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Generate 2 random numbers uniformly distributed in (0,1)
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        r1 = numpy.random.rand()
+        r2 = numpy.random.rand()
+
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Calculate propensities
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        propensities, transitionTypes = self.calc_propensities()
+
+        if(propensities.sum() > 0):
+
+            #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            # Calculate alpha
+            #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            propensities_flat   = propensities.ravel(order='F')
+            cumsum              = propensities_flat.cumsum()
+            alpha               = propensities_flat.sum()
+
+            #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            # Compute the time until the next event takes place
+            #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            tau = (1/alpha)*numpy.log(float(1/r1))
+
+            if(tau > max_dt):
+                # If the time to next event exceeds the max allowed interval,
+                # advance the system time by the max allowed interval,
+                # but do not execute any events (recalculate Gillespie interval/event next iteration)
+                self.t += max_dt
+                self.timer_state += max_dt
+                # Update testing and isolation timers/statuses
+                isolatedNodes = numpy.argwhere((self.X==self.Q_S)|(self.X==self.Q_E)|(self.X==self.Q_pre)|(self.X==self.Q_sym)|(self.X==self.Q_asym)|(self.X==self.Q_R))[:,0].flatten()
+                self.timer_isolation[isolatedNodes] = self.timer_isolation[isolatedNodes] + max_dt
+                nodesExitingIsolation = numpy.argwhere(self.timer_isolation >= self.isolationTime)
+                for isoNode in nodesExitingIsolation:
+                    self.set_isolation(node=isoNode, isolate=False)
+                # return without any further event execution
+                return True
+            else:
+                self.t += tau
+                self.timer_state += tau
+
+            #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            # Compute which event takes place
+            #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            transitionIdx   = numpy.searchsorted(cumsum,r2*alpha)
+            transitionNode  = transitionIdx % self.numNodes
+            transitionType  = transitionTypes[ int(transitionIdx/self.numNodes) ]
+
+            #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            # Perform updates triggered by rate propensities:
+            #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            assert(self.X[transitionNode] == self.transitions[transitionType]['currentState'] and self.X[transitionNode]!=self.F), "Assertion error: Node "+str(transitionNode)+" has unexpected current state "+str(self.X[transitionNode])+" given the intended transition of "+str(transitionType)+"."
+            self.X[transitionNode] = self.transitions[transitionType]['newState']
+
+            self.testedInCurrentState[transitionNode] = False
+
+            self.timer_state[transitionNode] = 0.0
+
+            #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+            # Save information about infection events when they occur:
+            if(transitionType == 'StoE' or transitionType == 'QStoQE'):
+                transitionNode_GNbrs  = list(self.G[transitionNode].keys())
+                transitionNode_GQNbrs = list(self.G_Q[transitionNode].keys())
+                self.infectionsLog.append({ 't':                            self.t,
+                                            'infected_node':                transitionNode,
+                                            'infection_type':               transitionType,
+                                            'infected_node_degree':         self.degree[transitionNode],
+                                            'local_contact_nodes':          transitionNode_GNbrs,
+                                            'local_contact_node_states':    self.X[transitionNode_GNbrs].flatten(),
+                                            'isolation_contact_nodes':      transitionNode_GQNbrs,
+                                            'isolation_contact_node_states':self.X[transitionNode_GQNbrs].flatten() })
+
+            #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+            if(transitionType in ['EtoQE', 'IPREtoQPRE', 'ISYMtoQSYM', 'IASYMtoQASYM', 'ISYMtoH']):
+                self.set_positive(node=transitionNode, positive=True)
+
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        else:
+
+            tau = 0.01
+            self.t += tau
+            self.timer_state += tau
+
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        self.tidx += 1
+
+        self.tseries[self.tidx]     = self.t
+        self.numS[self.tidx]        = numpy.clip(numpy.count_nonzero(self.X==self.S), a_min=0, a_max=self.numNodes)
+        self.numE[self.tidx]        = numpy.clip(numpy.count_nonzero(self.X==self.E), a_min=0, a_max=self.numNodes)
+        self.numI_pre[self.tidx]    = numpy.clip(numpy.count_nonzero(self.X==self.I_pre), a_min=0, a_max=self.numNodes)
+        self.numI_sym[self.tidx]    = numpy.clip(numpy.count_nonzero(self.X==self.I_sym), a_min=0, a_max=self.numNodes)
+        self.numI_asym[self.tidx]   = numpy.clip(numpy.count_nonzero(self.X==self.I_asym), a_min=0, a_max=self.numNodes)
+        self.numH[self.tidx]        = numpy.clip(numpy.count_nonzero(self.X==self.H), a_min=0, a_max=self.numNodes)
+        self.numR[self.tidx]        = numpy.clip(numpy.count_nonzero(self.X==self.R), a_min=0, a_max=self.numNodes)
+        self.numF[self.tidx]        = numpy.clip(numpy.count_nonzero(self.X==self.F), a_min=0, a_max=self.numNodes)
+        self.numQ_S[self.tidx]      = numpy.clip(numpy.count_nonzero(self.X==self.Q_S), a_min=0, a_max=self.numNodes)
+        self.numQ_E[self.tidx]      = numpy.clip(numpy.count_nonzero(self.X==self.Q_E), a_min=0, a_max=self.numNodes)
+        self.numQ_pre[self.tidx]    = numpy.clip(numpy.count_nonzero(self.X==self.Q_pre), a_min=0, a_max=self.numNodes)
+        self.numQ_sym[self.tidx]    = numpy.clip(numpy.count_nonzero(self.X==self.Q_sym), a_min=0, a_max=self.numNodes)
+        self.numQ_asym[self.tidx]   = numpy.clip(numpy.count_nonzero(self.X==self.Q_asym), a_min=0, a_max=self.numNodes)
+        self.numQ_R[self.tidx]      = numpy.clip(numpy.count_nonzero(self.X==self.Q_R), a_min=0, a_max=self.numNodes)
+        self.numTested[self.tidx]   = numpy.clip(numpy.count_nonzero(self.tested), a_min=0, a_max=self.numNodes)
+        self.numPositive[self.tidx] = numpy.clip(numpy.count_nonzero(self.positive), a_min=0, a_max=self.numNodes)
+
+        self.N[self.tidx]           = numpy.clip((self.numNodes - self.numF[self.tidx]), a_min=0, a_max=self.numNodes)
+
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Update testing and isolation statuses
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        isolatedNodes = numpy.argwhere((self.X==self.Q_S)|(self.X==self.Q_E)|(self.X==self.Q_pre)|(self.X==self.Q_sym)|(self.X==self.Q_asym)|(self.X==self.Q_R))[:,0].flatten()
+        self.timer_isolation[isolatedNodes] = self.timer_isolation[isolatedNodes] + tau
+
+        nodesExitingIsolation = numpy.argwhere(self.timer_isolation >= self.isolationTime)
+        for isoNode in nodesExitingIsolation:
+            self.set_isolation(node=isoNode, isolate=False)
+
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Store system states
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        if(self.store_Xseries):
+            self.Xseries[self.tidx,:] = self.X.T
+
+        if(self.nodeGroupData):
+            for groupName in self.nodeGroupData:
+                self.nodeGroupData[groupName]['numS'][self.tidx]        = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.S)
+                self.nodeGroupData[groupName]['numE'][self.tidx]        = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.E)
+                self.nodeGroupData[groupName]['numI_pre'][self.tidx]    = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.I_pre)
+                self.nodeGroupData[groupName]['numI_sym'][self.tidx]    = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.I_sym)
+                self.nodeGroupData[groupName]['numI_asym'][self.tidx]   = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.I_asym)
+                self.nodeGroupData[groupName]['numH'][self.tidx]        = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.H)
+                self.nodeGroupData[groupName]['numR'][self.tidx]        = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.R)
+                self.nodeGroupData[groupName]['numF'][self.tidx]        = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.F)
+                self.nodeGroupData[groupName]['numQ_S'][self.tidx]      = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_S)
+                self.nodeGroupData[groupName]['numQ_E'][self.tidx]      = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_E)
+                self.nodeGroupData[groupName]['numQ_pre'][self.tidx]    = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_pre)
+                self.nodeGroupData[groupName]['numQ_sym'][self.tidx]    = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_sym)
+                self.nodeGroupData[groupName]['numQ_asym'][self.tidx]   = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_asym)
+                self.nodeGroupData[groupName]['numQ_R'][self.tidx]      = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_R)
+                self.nodeGroupData[groupName]['N'][self.tidx]           = numpy.clip((self.nodeGroupData[groupName]['numS'][0] + self.nodeGroupData[groupName]['numE'][0] + self.nodeGroupData[groupName]['numI'][0] + self.nodeGroupData[groupName]['numQ_E'][0] + self.nodeGroupData[groupName]['numQ_I'][0] + self.nodeGroupData[groupName]['numR'][0]), a_min=0, a_max=self.numNodes)
+                self.nodeGroupData[groupName]['numTested'][self.tidx]   = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.tested)
+                self.nodeGroupData[groupName]['numPositive'][self.tidx] = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.positive)
+
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Terminate if tmax reached or num infections is 0:
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        if(self.t >= self.tmax or (self.total_num_infected(self.tidx) < 1 and self.total_num_isolated(self.tidx) < 1)):
+            self.finalize_data_series()
+            return False
+
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        return True
+
     def node_degrees(self, Amat):
         return Amat.sum(axis=0).reshape(self.numNodes,1)   # sums of adj matrix cols
 
