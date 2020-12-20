@@ -269,7 +269,7 @@ class SEIRSModel(object):
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
     def introduce_exposures(self, num_new_exposures):
-        exposedNodes = numpy.random.choice(range(self.numNodes), size=num_new_exposures, replace=False)
+        exposedNodes = np.random.choice(range(self.numNodes), size=num_new_exposures, replace=False)
         for exposedNode in exposedNodes:
             if(self.X[exposedNode]==self.S):
                 self.X[exposedNode] = self.E
@@ -793,8 +793,8 @@ class SEIRSModel(object):
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Generate 2 random numbers uniformly distributed in (0,1)
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        r1 = numpy.random.rand()
-        r2 = numpy.random.rand()
+        r1 = np.random.rand()
+        r2 = np.random.rand()
 
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Calculate propensities
@@ -813,7 +813,7 @@ class SEIRSModel(object):
             #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # Compute the time until the next event takes place
             #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            tau = (1/alpha)*numpy.log(float(1/r1))
+            tau = (1/alpha)*np.log(float(1/r1))
 
             if(tau > max_dt):
                 # If the time to next event exceeds the max allowed interval,
@@ -822,9 +822,9 @@ class SEIRSModel(object):
                 self.t += max_dt
                 self.timer_state += max_dt
                 # Update testing and isolation timers/statuses
-                isolatedNodes = numpy.argwhere((self.X==self.Q_S)|(self.X==self.Q_E)|(self.X==self.Q_pre)|(self.X==self.Q_sym)|(self.X==self.Q_asym)|(self.X==self.Q_R))[:,0].flatten()
+                isolatedNodes = np.argwhere((self.X==self.Q_S)|(self.X==self.Q_E)|(self.X==self.Q_pre)|(self.X==self.Q_sym)|(self.X==self.Q_asym)|(self.X==self.Q_R))[:,0].flatten()
                 self.timer_isolation[isolatedNodes] = self.timer_isolation[isolatedNodes] + max_dt
-                nodesExitingIsolation = numpy.argwhere(self.timer_isolation >= self.isolationTime)
+                nodesExitingIsolation = np.argwhere(self.timer_isolation >= self.isolationTime)
                 for isoNode in nodesExitingIsolation:
                     self.set_isolation(node=isoNode, isolate=False)
                 # return without any further event execution
@@ -836,7 +836,7 @@ class SEIRSModel(object):
             #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # Compute which event takes place
             #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            transitionIdx   = numpy.searchsorted(cumsum,r2*alpha)
+            transitionIdx   = np.searchsorted(cumsum,r2*alpha)
             transitionNode  = transitionIdx % self.numNodes
             transitionType  = transitionTypes[ int(transitionIdx/self.numNodes) ]
 
@@ -883,33 +883,33 @@ class SEIRSModel(object):
         self.tidx += 1
 
         self.tseries[self.tidx]     = self.t
-        self.numS[self.tidx]        = numpy.clip(numpy.count_nonzero(self.X==self.S), a_min=0, a_max=self.numNodes)
-        self.numE[self.tidx]        = numpy.clip(numpy.count_nonzero(self.X==self.E), a_min=0, a_max=self.numNodes)
-        self.numI_pre[self.tidx]    = numpy.clip(numpy.count_nonzero(self.X==self.I_pre), a_min=0, a_max=self.numNodes)
-        self.numI_sym[self.tidx]    = numpy.clip(numpy.count_nonzero(self.X==self.I_sym), a_min=0, a_max=self.numNodes)
-        self.numI_asym[self.tidx]   = numpy.clip(numpy.count_nonzero(self.X==self.I_asym), a_min=0, a_max=self.numNodes)
-        self.numH[self.tidx]        = numpy.clip(numpy.count_nonzero(self.X==self.H), a_min=0, a_max=self.numNodes)
-        self.numR[self.tidx]        = numpy.clip(numpy.count_nonzero(self.X==self.R), a_min=0, a_max=self.numNodes)
-        self.numF[self.tidx]        = numpy.clip(numpy.count_nonzero(self.X==self.F), a_min=0, a_max=self.numNodes)
-        self.numQ_S[self.tidx]      = numpy.clip(numpy.count_nonzero(self.X==self.Q_S), a_min=0, a_max=self.numNodes)
-        self.numQ_E[self.tidx]      = numpy.clip(numpy.count_nonzero(self.X==self.Q_E), a_min=0, a_max=self.numNodes)
-        self.numQ_pre[self.tidx]    = numpy.clip(numpy.count_nonzero(self.X==self.Q_pre), a_min=0, a_max=self.numNodes)
-        self.numQ_sym[self.tidx]    = numpy.clip(numpy.count_nonzero(self.X==self.Q_sym), a_min=0, a_max=self.numNodes)
-        self.numQ_asym[self.tidx]   = numpy.clip(numpy.count_nonzero(self.X==self.Q_asym), a_min=0, a_max=self.numNodes)
-        self.numQ_R[self.tidx]      = numpy.clip(numpy.count_nonzero(self.X==self.Q_R), a_min=0, a_max=self.numNodes)
-        self.numTested[self.tidx]   = numpy.clip(numpy.count_nonzero(self.tested), a_min=0, a_max=self.numNodes)
-        self.numPositive[self.tidx] = numpy.clip(numpy.count_nonzero(self.positive), a_min=0, a_max=self.numNodes)
+        self.numS[self.tidx]        = np.clip(np.count_nonzero(self.X==self.S), a_min=0, a_max=self.numNodes)
+        self.numE[self.tidx]        = np.clip(np.count_nonzero(self.X==self.E), a_min=0, a_max=self.numNodes)
+        self.numI_pre[self.tidx]    = np.clip(np.count_nonzero(self.X==self.I_pre), a_min=0, a_max=self.numNodes)
+        self.numI_sym[self.tidx]    = np.clip(np.count_nonzero(self.X==self.I_sym), a_min=0, a_max=self.numNodes)
+        self.numI_asym[self.tidx]   = np.clip(np.count_nonzero(self.X==self.I_asym), a_min=0, a_max=self.numNodes)
+        self.numH[self.tidx]        = np.clip(np.count_nonzero(self.X==self.H), a_min=0, a_max=self.numNodes)
+        self.numR[self.tidx]        = np.clip(np.count_nonzero(self.X==self.R), a_min=0, a_max=self.numNodes)
+        self.numF[self.tidx]        = np.clip(np.count_nonzero(self.X==self.F), a_min=0, a_max=self.numNodes)
+        self.numQ_S[self.tidx]      = np.clip(np.count_nonzero(self.X==self.Q_S), a_min=0, a_max=self.numNodes)
+        self.numQ_E[self.tidx]      = np.clip(np.count_nonzero(self.X==self.Q_E), a_min=0, a_max=self.numNodes)
+        self.numQ_pre[self.tidx]    = np.clip(np.count_nonzero(self.X==self.Q_pre), a_min=0, a_max=self.numNodes)
+        self.numQ_sym[self.tidx]    = np.clip(np.count_nonzero(self.X==self.Q_sym), a_min=0, a_max=self.numNodes)
+        self.numQ_asym[self.tidx]   = np.clip(np.count_nonzero(self.X==self.Q_asym), a_min=0, a_max=self.numNodes)
+        self.numQ_R[self.tidx]      = np.clip(np.count_nonzero(self.X==self.Q_R), a_min=0, a_max=self.numNodes)
+        self.numTested[self.tidx]   = np.clip(np.count_nonzero(self.tested), a_min=0, a_max=self.numNodes)
+        self.numPositive[self.tidx] = np.clip(np.count_nonzero(self.positive), a_min=0, a_max=self.numNodes)
 
-        self.N[self.tidx]           = numpy.clip((self.numNodes - self.numF[self.tidx]), a_min=0, a_max=self.numNodes)
+        self.N[self.tidx]           = np.clip((self.numNodes - self.numF[self.tidx]), a_min=0, a_max=self.numNodes)
 
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Update testing and isolation statuses
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        isolatedNodes = numpy.argwhere((self.X==self.Q_S)|(self.X==self.Q_E)|(self.X==self.Q_pre)|(self.X==self.Q_sym)|(self.X==self.Q_asym)|(self.X==self.Q_R))[:,0].flatten()
+        isolatedNodes = np.argwhere((self.X==self.Q_S)|(self.X==self.Q_E)|(self.X==self.Q_pre)|(self.X==self.Q_sym)|(self.X==self.Q_asym)|(self.X==self.Q_R))[:,0].flatten()
         self.timer_isolation[isolatedNodes] = self.timer_isolation[isolatedNodes] + tau
 
-        nodesExitingIsolation = numpy.argwhere(self.timer_isolation >= self.isolationTime)
+        nodesExitingIsolation = np.argwhere(self.timer_isolation >= self.isolationTime)
         for isoNode in nodesExitingIsolation:
             self.set_isolation(node=isoNode, isolate=False)
 
@@ -921,23 +921,23 @@ class SEIRSModel(object):
 
         if(self.nodeGroupData):
             for groupName in self.nodeGroupData:
-                self.nodeGroupData[groupName]['numS'][self.tidx]        = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.S)
-                self.nodeGroupData[groupName]['numE'][self.tidx]        = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.E)
-                self.nodeGroupData[groupName]['numI_pre'][self.tidx]    = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.I_pre)
-                self.nodeGroupData[groupName]['numI_sym'][self.tidx]    = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.I_sym)
-                self.nodeGroupData[groupName]['numI_asym'][self.tidx]   = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.I_asym)
-                self.nodeGroupData[groupName]['numH'][self.tidx]        = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.H)
-                self.nodeGroupData[groupName]['numR'][self.tidx]        = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.R)
-                self.nodeGroupData[groupName]['numF'][self.tidx]        = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.F)
-                self.nodeGroupData[groupName]['numQ_S'][self.tidx]      = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_S)
-                self.nodeGroupData[groupName]['numQ_E'][self.tidx]      = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_E)
-                self.nodeGroupData[groupName]['numQ_pre'][self.tidx]    = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_pre)
-                self.nodeGroupData[groupName]['numQ_sym'][self.tidx]    = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_sym)
-                self.nodeGroupData[groupName]['numQ_asym'][self.tidx]   = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_asym)
-                self.nodeGroupData[groupName]['numQ_R'][self.tidx]      = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_R)
-                self.nodeGroupData[groupName]['N'][self.tidx]           = numpy.clip((self.nodeGroupData[groupName]['numS'][0] + self.nodeGroupData[groupName]['numE'][0] + self.nodeGroupData[groupName]['numI'][0] + self.nodeGroupData[groupName]['numQ_E'][0] + self.nodeGroupData[groupName]['numQ_I'][0] + self.nodeGroupData[groupName]['numR'][0]), a_min=0, a_max=self.numNodes)
-                self.nodeGroupData[groupName]['numTested'][self.tidx]   = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.tested)
-                self.nodeGroupData[groupName]['numPositive'][self.tidx] = numpy.count_nonzero(self.nodeGroupData[groupName]['mask']*self.positive)
+                self.nodeGroupData[groupName]['numS'][self.tidx]        = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.S)
+                self.nodeGroupData[groupName]['numE'][self.tidx]        = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.E)
+                self.nodeGroupData[groupName]['numI_pre'][self.tidx]    = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.I_pre)
+                self.nodeGroupData[groupName]['numI_sym'][self.tidx]    = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.I_sym)
+                self.nodeGroupData[groupName]['numI_asym'][self.tidx]   = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.I_asym)
+                self.nodeGroupData[groupName]['numH'][self.tidx]        = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.H)
+                self.nodeGroupData[groupName]['numR'][self.tidx]        = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.R)
+                self.nodeGroupData[groupName]['numF'][self.tidx]        = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.F)
+                self.nodeGroupData[groupName]['numQ_S'][self.tidx]      = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_S)
+                self.nodeGroupData[groupName]['numQ_E'][self.tidx]      = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_E)
+                self.nodeGroupData[groupName]['numQ_pre'][self.tidx]    = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_pre)
+                self.nodeGroupData[groupName]['numQ_sym'][self.tidx]    = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_sym)
+                self.nodeGroupData[groupName]['numQ_asym'][self.tidx]   = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_asym)
+                self.nodeGroupData[groupName]['numQ_R'][self.tidx]      = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.X==self.Q_R)
+                self.nodeGroupData[groupName]['N'][self.tidx]           = np.clip((self.nodeGroupData[groupName]['numS'][0] + self.nodeGroupData[groupName]['numE'][0] + self.nodeGroupData[groupName]['numI'][0] + self.nodeGroupData[groupName]['numQ_E'][0] + self.nodeGroupData[groupName]['numQ_I'][0] + self.nodeGroupData[groupName]['numR'][0]), a_min=0, a_max=self.numNodes)
+                self.nodeGroupData[groupName]['numTested'][self.tidx]   = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.tested)
+                self.nodeGroupData[groupName]['numPositive'][self.tidx] = np.count_nonzero(self.nodeGroupData[groupName]['mask']*self.positive)
 
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Terminate if tmax reached or num infections is 0:
